@@ -18,7 +18,7 @@ public class SchemaExport {
 		Map<String, Object> properties = new HashMap<>();
 		properties.put("javax.persistence.schema-generation.scripts.action", "create");
 		properties.put("javax.persistence.schema-generation.scripts.create-target", stringWriter);
-		Persistence.generateSchema("hibernate-examples", properties);
+		Persistence.generateSchema("homework02", properties);
 
 		Formatter formatter = new DDLFormatterImpl();
 		Scanner scanner = new Scanner(stringWriter.toString());

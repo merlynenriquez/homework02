@@ -1,6 +1,7 @@
-package cs5220stu08.hw2.resource;
+package cs5220stu08.hw2.entities;
 
 import java.io.Serializable;
+import java.sql.Date;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -10,8 +11,10 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 
-@Entity
-public class File implements Serializable {
+import com.sun.istack.Nullable;
+
+@Entity(name = "resources")
+public class Resource implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
@@ -22,15 +25,24 @@ public class File implements Serializable {
 	@Column(name = "name")
 	private String nameFile;
 	
-	private String version;
+	@Nullable
+	private double version;
 	
 	private double size;
 	
 	private String type;
 	
+	private boolean isPublic;
+	
+	@Column(name = "create_date")
+	private Date creationDate;
+	
+	@Column(name = "modify_date")
+	private Date modificationdate;
+	
 	@ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "fileId", referencedColumnName = "id")
-    private File file;
+    private Resource parentFile;
 
 	public Integer getId() {
 		return id;
@@ -48,11 +60,11 @@ public class File implements Serializable {
 		this.nameFile = nameFile;
 	}
 
-	public String getVersion() {
+	public double getVersion() {
 		return version;
 	}
 
-	public void setVersion(String version) {
+	public void setVersion(double version) {
 		this.version = version;
 	}
 
@@ -72,12 +84,37 @@ public class File implements Serializable {
 		this.type = type;
 	}
 
-	public File getFile() {
-		return file;
+	public boolean isPublic() {
+		return isPublic;
 	}
 
-	public void setFile(File file) {
-		this.file = file;
+	public void setPublic(boolean isPublic) {
+		this.isPublic = isPublic;
 	}
 
+	public Date getCreationDate() {
+		return creationDate;
+	}
+
+	public void setCreationDate(Date creationDate) {
+		this.creationDate = creationDate;
+	}
+
+	public Date getModificationdate() {
+		return modificationdate;
+	}
+
+	public void setModificationdate(Date modificationdate) {
+		this.modificationdate = modificationdate;
+	}
+
+	public Resource getParentFile() {
+		return parentFile;
+	}
+
+	public void setParentFile(Resource parentFile) {
+		this.parentFile = parentFile;
+	}
+
+	
 }
