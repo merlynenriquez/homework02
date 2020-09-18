@@ -25,7 +25,14 @@ public class UserResource implements Serializable {
 	private Resource resource;
 	
 	private String ownerType;
+		
+	public UserResourcePk getPk() {
+		return pk;
+	}
 
+	public void setPk(UserResourcePk pk) {
+		this.pk = pk;
+	}
 
 	public String getOwnerType() {
 		return ownerType;
