@@ -16,12 +16,12 @@ public class UserResource implements Serializable {
 	@EmbeddedId
 	private  UserResourcePk pk;
 	
-	@ManyToOne
-	@JoinColumn(name="userId")
+	@ManyToOne(optional=false)
+    @JoinColumn(name = "id_user", referencedColumnName = "id", insertable = false, updatable = false )
 	private User user;
 	
-	@ManyToOne
-	@JoinColumn(name="resourceId")
+	@ManyToOne(optional=false)
+	@JoinColumn(name="id_resource", referencedColumnName = "id", insertable = false, updatable = false)
 	private Resource resource;
 	
 	private String ownerType;

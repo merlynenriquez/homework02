@@ -10,10 +10,12 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.Table;
 
 import com.sun.istack.Nullable;
 
-@Entity(name = "resources")
+@Entity
+@Table(name = "resources")
 public class Resource implements Serializable {
 	
 	private static final long serialVersionUID = 1L;

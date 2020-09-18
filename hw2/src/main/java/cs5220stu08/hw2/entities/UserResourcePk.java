@@ -10,10 +10,10 @@ public class UserResourcePk implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	@Column(name = "idUser")
+	@Column(name = "id_user")
 	private Integer idUser;
 
-	@Column(name = "idResource")
+	@Column(name = "id_resource")
 	private Integer idResource;
 
 	public Integer getIdUser() {
