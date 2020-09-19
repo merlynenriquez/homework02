@@ -3,6 +3,7 @@ package cs5220stu08.hw2;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -11,6 +12,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 
 import cs5220stu08.hw2.entities.Resource;
 import cs5220stu08.hw2.entities.User;
@@ -19,78 +21,164 @@ import cs5220stu08.hw2.entities.UserResourcePk;
 
 public class MyApp {
 
-	static EntityManagerFactory emFactory = Persistence.createEntityManagerFactory("homework02");
-	static EntityManager em = emFactory.createEntityManager();
-	static String opt;
-	static Calendar cal = Calendar.getInstance();
-
+	private EntityManagerFactory emFactory = Persistence.createEntityManagerFactory("homework02");
+	private EntityManager em = emFactory.createEntityManager();
+	private String opt;
+	private Calendar cal = Calendar.getInstance();
+	private Resource root = null;
+	public static final String ANSI_RED = "\u001B[31m";
+	public static final String ANSI_RESET = "\u001B[0m";
+	public static final String ANSI_BLUE = "\u001B[34m";
+	public static final String EXIT_BTN = "x";
+	public static final String EXIT_BCK = "b";
+	public static final String EXIT_DEL = "d";
+	public static final String EXIT_NEW = "n";
+	
 	public static void main(String[] args) throws IOException {
-		List<Resource> lst1 = lstParents();
-
-		principalMsg();
-		for (int i = 0; i < lst1.size(); i++) {
-			System.out.println(lst1.get(i).getId() + ") " + lst1.get(i).getNameFile());
-		}
-
-		promptMsg("Please enter your choice");
-		if (opt.equals("n")) {
-			System.out.println("New");
-		} else if (opt.equals("x")) {
-			System.out.println("Exit");
-		} else {
-			
-			
-			System.out.println("===>"+opt);
-			if (StringUtils.isNumeric(opt) ) 
-				lstChilds(opt);
-
-			if (opt.equals("b")) {
-				principalMsg();
-				for (int i = 0; i < lstParents().size(); i++) {
-					System.out.println(lst1.get(i).getId() + ") " + lst1.get(i).getNameFile());
-				}
-				promptMsg("Please enter one option");
-				lstParents();
-			} else if (opt.equals("d")) {
-				removeElement(3);
-
-			} else if (opt.equals("n")) {
-				promptMsg("Please enter the name of the Folder");
-				insertElement(opt);
-			}
+		MyApp obj = new MyApp();
+		try {
+			obj.execute();	
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
+	
+	public void execute() throws Exception{
+		
+		List<Resource> lst1 = listResources( root );		
+		opt = "";
+		while( !opt.equals(EXIT_BTN) ) {
+			
+			if( !StringUtils.isEmpty( opt )) {
+				switch( opt) {
+				case EXIT_NEW: 
+					promptMsg("Please enter the name of the Folder You want to Create");
+					insertFolder(opt, root);
+					lst1 = listResources( root );
+					break;
+				case EXIT_BCK: 
+					root =  getParent( root );
+					lst1 = listResources( root );
+					break;
+				case EXIT_DEL: 
+					removeElement( root);
+					lst1 = listResources( root );
+					break;
+				default : 					
+					if (NumberUtils.isDigits(opt)) {
+						Integer indexSelected = Integer.parseInt(opt) - 1;
+						root = lst1.get(indexSelected);
+						lst1 = listResources(root);
+					}else {
+						System.out.println(ANSI_RED + "\r\n---Please enter a Valid Option!--- \r\n " + ANSI_RESET);
 
-	public static List<Resource> lstParents() {
-		List<Resource> lstResources = em.createQuery("from Resource where parentFile is null", Resource.class)
-				.getResultList();
+					}					 
+					break;
+				}
+			}
+			chooseMsgToShow(root , lst1 );
+		}
+		System.exit(1);
+		
+	}
+
+	private Resource getParent(Resource root2) {
+		Resource lstResources = null;
+		if( root2 !=null ) {
+			try {
+				lstResources = em.createQuery("from Resource where id = :id ", Resource.class)
+						.setParameter("id", root2.getParentFile().getId() )
+						.getSingleResult();
+			} catch (Exception e) {
+				System.out.println( "It doesn't have Parents ");
+			}
+		}else {
+			System.out.println(ANSI_RED + "\r\n---Please enter a Valid Option!--- \r\n " + ANSI_RESET);
+		}		
+		
 		return lstResources;
 	}
 
-	public static int removeElement(Integer idResource) {
-		em.getTransaction().begin();
-		int isSuccessful = em.createQuery("delete from Resource r where r.id = :idResource")
-				.setParameter("idResource", idResource).executeUpdate();
-		System.out.println("remove " + isSuccessful);
-		em.getTransaction().commit();
-		return isSuccessful;
+	private  void chooseMsgToShow(Resource root , List<Resource> lst1 ) {
+		
+		if( root==null) {
+			principalMsg();
+		}else {
+			subMsg( );
+		}
+		
+		for (int i = 0; i < lst1.size(); i++) {
+			System.out.println( (i+1) + ") " + lst1.get(i).getNameFile());
+		}
+		
+		try {
+			promptMsg("Please enter your choice");
+		} catch (Exception e) {
+			System.out.println( "ERROR : " + e.getMessage() );
+		}		
+		
 	}
 	
-	public static void insertElement(String nameFile) {
+	public  List<Resource> listResources( Resource root ) {
+		List<Resource> lstResources =  null;
+		if( root == null ) {
+			lstResources = em.createQuery("from Resource where parentFile is null", Resource.class)
+			.getResultList();
+		}else {
+			lstResources = em.createQuery("from Resource where parentFile.id = :parentId", Resource.class)
+					.setParameter("parentId", root.getId() )
+					.getResultList(); 
+		}
+		return lstResources;
+	}
+	
+	public void removeElement(Resource root3) {
+		System.out.println("==="+root3.getId());
+		
+		StringBuffer sql = new StringBuffer();
+		sql.append("with recursive cte (id, name, fileId ) as (select id, name, fileId from resources where fileId = 129 ");
+		sql.append("union all select r.id, r.name, r.fileId from resources r inner join cte  on r.fileId = cte.fileId ) select * from cte ");
+		//sql.append("(select @pv \\:= '129') initialisation where   find_in_set(fileId, @pv) and     length(@pv \\:= concat(@pv, ',', id)) "); 
+		
+		
+		
+		List<Resource> lstRsr = (List<Resource>) em.createNativeQuery(sql.toString(), Resource.class).getResultList();
+	
+		/*for (Resource resource : lstRsr) {
+			System.out.println(resource.getNameFile());
+		}*/
+		System.out.println(lstRsr.size());
+		
+		
+		em.getTransaction().begin();
+		em.remove(root3); em.flush();
+		em.getTransaction().commit();
+		
+		
+		System.out.println((lstRsr.size()+1)+" folder(s) deleted " );
+		//em.getTransaction().commit();
+		//System.out.println("==>"+this.root.getId());
+		
+		//return isSuccessful;
+	}
+	
+	public  void insertFolder(String nameFile, Resource resource) {
 		em.getTransaction().begin();
 		User user = em.find(User.class, 1);
 		
-		Resource resource = new Resource();
-		resource.setNameFile(nameFile);
-		resource.setPublic(new Boolean(false));
-		resource.setVersion(1);
-		resource.setCreationDate(cal.getTime());
-		em.persist(resource);
+		Resource rsr = new Resource();
+		rsr.setNameFile(nameFile);
+		rsr.setPublic(new Boolean(false));
+		rsr.setVersion(1);
+		rsr.setType("Folder");
+		rsr.setCreationDate(cal.getTime());
+		rsr.setParentFile(resource != null ? resource : null);
+		em.persist(rsr);
 		
 		UserResource usrRsc = new UserResource();
 		UserResourcePk pk = new UserResourcePk();
 		pk.setIdUser(user.getId());
-		pk.setIdResource(resource.getId());
+		pk.setIdResource(rsr.getId() );
 		usrRsc.setPk(pk);
 		usrRsc.setOwnerType("Owner");
 				
@@ -98,41 +186,25 @@ public class MyApp {
 		em.getTransaction().commit();
 	}
 
-	public static void principalMsg() {
+	public  void principalMsg() {
 		System.out.println("CS5220 Online File Manager\r\n" + "");
 		System.out.println("n) New Folder" + "");
 		System.out.println("x) Exit" + "");
 	}
 
-	public static void subMsg(String idOption) {
-		System.out.println(
-				"Current folder: " + em.find(Resource.class, Integer.parseInt(idOption)).getNameFile() + "\r\n");
+	public  void subMsg( ) {
+		System.out.println(ANSI_BLUE + "\r\nCurrent folder: " + this.root.getNameFile() + "\r\n" + ANSI_RESET);
 		System.out.println("b) Back to parent" + "");
 		System.out.println("n) New Folder" + "");
 		System.out.println("d) Delete current folder" + "");
 		System.out.println("x) Exit" + "");
 	}
 
-	public static void promptMsg(String message) throws IOException {
+	public void promptMsg(String message) throws IOException {
 		System.out.println(message + " : ");
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		opt = reader.readLine();
 	}
-	
-	public static void lstChilds(String idParent) throws IOException {
-		List<Resource> lstResourcesChild = em
-				.createQuery("from Resource where parentFile.id = :parentId", Resource.class)
-				.setParameter("parentId", Integer.parseInt(idParent)).getResultList();
-		subMsg(opt);
-		for (int i = 0; i < lstResourcesChild.size(); i++) {
-			System.out.println(lstResourcesChild.get(i).getId() + ") " + lstResourcesChild.get(i).getNameFile());
-		}
-
-		promptMsg("Please enter one option");
-		if (StringUtils.isNumeric(opt) ) 
-			lstChilds(opt);
-	}
-	
 	
 
 }
