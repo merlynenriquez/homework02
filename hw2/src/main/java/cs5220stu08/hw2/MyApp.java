@@ -17,12 +17,18 @@ import cs5220stu08.hw2.entities.Resource;
 import cs5220stu08.hw2.entities.User;
 import cs5220stu08.hw2.entities.UserResource;
 import cs5220stu08.hw2.entities.UserResourcePk;
-
+/**
+ * 
+ * @author Merlyn Enriquez
+ *
+ */
 public class MyApp {
 
 	public static final String ANSI_RED = "\u001B[31m";
 	public static final String ANSI_RESET = "\u001B[0m";
 	public static final String ANSI_BLUE = "\u001B[34m";
+	public static final String CYAN_BOLD = "\033[1;36m"; 
+
 	public static final String EXIT_BTN = "x";
 	public static final String EXIT_BCK = "b";
 	public static final String EXIT_DEL = "d";
@@ -43,16 +49,14 @@ public class MyApp {
 		}
 	}
 	
-	public void execute() throws Exception{
-		
+	public void execute() throws Exception{		
 		List<Resource> lst1 = listResources( root );		
 		opt = "";
-		while( !opt.equals(EXIT_BTN) ) {
-			
+		while( !opt.equals(EXIT_BTN) ) {			
 			if( !StringUtils.isEmpty( opt )) {
 				switch( opt) {
 				case EXIT_NEW: 
-					promptMsg("Please enter the name of the Folder You want to Create");
+					promptMsg(ANSI_BLUE + "\r\n---Please enter Folder's Name You want to Create : \r\n" + ANSI_RESET);
 					insertFolder(opt, root);
 					lst1 = listResources( root );
 					break;
@@ -62,7 +66,6 @@ public class MyApp {
 					break;
 				case EXIT_DEL: 
 					Resource parent = root.getParentFile();
-					System.out.println("parent.getId()"+parent.getId());
 					removeElement( root);
 					lst1 = listResources(parent );
 					break;
@@ -149,7 +152,7 @@ public class MyApp {
 		em.getTransaction().begin();
 		List<Resource> lstResources = em.createNativeQuery(sql.toString(), Resource.class).setParameter("idRsc", root3.getId()).getResultList();
 		for (Resource resource : lstResources) {
-			em.remove(resource); 
+			em.remove(resource); //This option remove from table Resources and UserResources 
 		}
 		em.getTransaction().commit();
 		System.out.println(ANSI_RED + lstResources.size()+" folder(s) deleted " + ANSI_RESET);
@@ -194,7 +197,7 @@ public class MyApp {
 	}
 
 	public void promptMsg(String message) throws IOException {
-		System.out.println(message + " : ");
+		System.out.println( CYAN_BOLD + message + ANSI_RESET);
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		opt = reader.readLine();
 	}
