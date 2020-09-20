@@ -3,7 +3,6 @@ package cs5220stu08.hw2;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -21,11 +20,6 @@ import cs5220stu08.hw2.entities.UserResourcePk;
 
 public class MyApp {
 
-	private EntityManagerFactory emFactory = Persistence.createEntityManagerFactory("homework02");
-	private EntityManager em = emFactory.createEntityManager();
-	private String opt;
-	private Calendar cal = Calendar.getInstance();
-	private Resource root = null;
 	public static final String ANSI_RED = "\u001B[31m";
 	public static final String ANSI_RESET = "\u001B[0m";
 	public static final String ANSI_BLUE = "\u001B[34m";
@@ -33,6 +27,12 @@ public class MyApp {
 	public static final String EXIT_BCK = "b";
 	public static final String EXIT_DEL = "d";
 	public static final String EXIT_NEW = "n";
+	
+	private EntityManagerFactory emFactory = Persistence.createEntityManagerFactory("homework02");
+	private EntityManager em = emFactory.createEntityManager();
+	private String opt;
+	private Calendar cal = Calendar.getInstance();
+	private Resource root = null;
 	
 	public static void main(String[] args) throws IOException {
 		MyApp obj = new MyApp();
@@ -61,8 +61,10 @@ public class MyApp {
 					lst1 = listResources( root );
 					break;
 				case EXIT_DEL: 
+					Resource parent = root.getParentFile();
+					System.out.println("parent.getId()"+parent.getId());
 					removeElement( root);
-					lst1 = listResources( root );
+					lst1 = listResources(parent );
 					break;
 				default : 					
 					if (NumberUtils.isDigits(opt)) {
@@ -71,7 +73,6 @@ public class MyApp {
 						lst1 = listResources(root);
 					}else {
 						System.out.println(ANSI_RED + "\r\n---Please enter a Valid Option!--- \r\n " + ANSI_RESET);
-
 					}					 
 					break;
 				}
@@ -79,7 +80,6 @@ public class MyApp {
 			chooseMsgToShow(root , lst1 );
 		}
 		System.exit(1);
-		
 	}
 
 	private Resource getParent(Resource root2) {
@@ -94,13 +94,11 @@ public class MyApp {
 			}
 		}else {
 			System.out.println(ANSI_RED + "\r\n---Please enter a Valid Option!--- \r\n " + ANSI_RESET);
-		}		
-		
+		}
 		return lstResources;
 	}
 
 	private  void chooseMsgToShow(Resource root , List<Resource> lst1 ) {
-		
 		if( root==null) {
 			principalMsg();
 		}else {
@@ -115,8 +113,7 @@ public class MyApp {
 			promptMsg("Please enter your choice");
 		} catch (Exception e) {
 			System.out.println( "ERROR : " + e.getMessage() );
-		}		
-		
+		}
 	}
 	
 	public  List<Resource> listResources( Resource root ) {
@@ -132,40 +129,36 @@ public class MyApp {
 		return lstResources;
 	}
 	
-	public void removeElement(Resource root3) {
-		System.out.println("==="+root3.getId());
-		
-		StringBuffer sql = new StringBuffer();
-		sql.append("with recursive cte (id, name, fileId ) as (select id, name, fileId from resources where fileId = 129 ");
-		sql.append("union all select r.id, r.name, r.fileId from resources r inner join cte  on r.fileId = cte.fileId ) select * from cte ");
-		//sql.append("(select @pv \\:= '129') initialisation where   find_in_set(fileId, @pv) and     length(@pv \\:= concat(@pv, ',', id)) "); 
-		
-		
-		
-		List<Resource> lstRsr = (List<Resource>) em.createNativeQuery(sql.toString(), Resource.class).getResultList();
-	
-		/*for (Resource resource : lstRsr) {
-			System.out.println(resource.getNameFile());
-		}*/
-		System.out.println(lstRsr.size());
-		
-		
-		em.getTransaction().begin();
-		em.remove(root3); em.flush();
-		em.getTransaction().commit();
-		
-		
-		System.out.println((lstRsr.size()+1)+" folder(s) deleted " );
-		//em.getTransaction().commit();
-		//System.out.println("==>"+this.root.getId());
-		
-		//return isSuccessful;
+	public List<Resource> listResourcesParent(Integer idParentResource) {
+		List<Resource> lstResources = null;
+
+		lstResources = em.createQuery("from Resource where parentFile.id = :parentId", Resource.class)
+				.setParameter("parentId", idParentResource).getResultList();
+
+		return lstResources;
 	}
 	
-	public  void insertFolder(String nameFile, Resource resource) {
+	@SuppressWarnings("unchecked")
+	public void removeElement(Resource root3) {
+		StringBuffer sql = new StringBuffer();
+		sql.append("with recursive rsc_tree as (select id, name, fileId, create_date, isPublic, modify_date, size, type, version from resources ");
+		sql.append("where id = :idRsc union all select child.id, child.name, child.fileId, child.create_date, child.isPublic, child.modify_date, child.size, child.type, child.version ");
+		sql.append("from resources as child join rsc_tree as parent on parent.id = child.fileId  ");
+		sql.append(") select * from rsc_tree order by fileId desc ");
+		
+		em.getTransaction().begin();
+		List<Resource> lstResources = em.createNativeQuery(sql.toString(), Resource.class).setParameter("idRsc", root3.getId()).getResultList();
+		for (Resource resource : lstResources) {
+			em.remove(resource); 
+		}
+		em.getTransaction().commit();
+		System.out.println(ANSI_RED + lstResources.size()+" folder(s) deleted " + ANSI_RESET);
+	}
+	
+	public void insertFolder(String nameFile, Resource resource) {
 		em.getTransaction().begin();
 		User user = em.find(User.class, 1);
-		
+
 		Resource rsr = new Resource();
 		rsr.setNameFile(nameFile);
 		rsr.setPublic(new Boolean(false));
@@ -174,14 +167,14 @@ public class MyApp {
 		rsr.setCreationDate(cal.getTime());
 		rsr.setParentFile(resource != null ? resource : null);
 		em.persist(rsr);
-		
+
 		UserResource usrRsc = new UserResource();
 		UserResourcePk pk = new UserResourcePk();
 		pk.setIdUser(user.getId());
-		pk.setIdResource(rsr.getId() );
+		pk.setIdResource(rsr.getId());
 		usrRsc.setPk(pk);
 		usrRsc.setOwnerType("Owner");
-				
+
 		em.persist(usrRsc);
 		em.getTransaction().commit();
 	}
@@ -205,6 +198,4 @@ public class MyApp {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		opt = reader.readLine();
 	}
-	
-
 }
